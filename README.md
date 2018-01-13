@@ -1,4 +1,4 @@
-# FIX message pipeline :  
+## FIX message pipeline :  
   * Input data is encrypted using FIX protocol.  
   * Using mulitple instances of Kafka console producer we are able to push data to a Kafka topic.  
   * The Kafka Spout, subscribing to this topic, passes the data on to the Storm topology.  
