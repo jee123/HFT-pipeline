@@ -1,16 +1,17 @@
+package storm.starter;
+
 import java.io.*;
 import java.net.Socket;
 import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 public class ServerAndThreadCoordinationUtils {
 
+    //set max time to run.
     public static void setMaxTimeToRunTimer(int millisecs) {
         Date timeLimit =
-                new Date(new Date().getTime() +  millisecs);
+                new Date(new Date().getTime() + millisecs);
         Timer timer = new Timer();
 
         timer.schedule(new TimerTask() {
@@ -23,24 +24,6 @@ public class ServerAndThreadCoordinationUtils {
         }, timeLimit);
     }
 
-    public static void pauseUntil() {
-        boolean fileExists = false;
-        while (!fileExists) {
-            File pauseFile = new File("/tmp/go");
-            if (!pauseFile.exists()) {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            } else {
-                fileExists = true;
-            }
-        }
-
-    }
-
-
 
     public static String send4LetterWord(String host, int port, String cmd)
             throws IOException {
@@ -48,9 +31,9 @@ public class ServerAndThreadCoordinationUtils {
         Socket sock = new Socket(host, port);
         BufferedReader reader = null;
         try {
-            OutputStream outstream = sock.getOutputStream();
-            outstream.write(cmd.getBytes());
-            outstream.flush();
+            OutputStream outputStream = sock.getOutputStream();
+            outputStream.write(cmd.getBytes());
+            outputStream.flush();
             // this replicates NC - close the output stream before reading
             sock.shutdownOutput();
 
@@ -96,27 +79,6 @@ public class ServerAndThreadCoordinationUtils {
             }
         }
         return false;
-    }
-
-    public static void await(CountDownLatch latch) {
-        try {
-            latch.await();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-            System.out.println("FATAL ERROR");
-            System.exit(-1);
-        }
-    }
-
-
-    public static void countDown(CountDownLatch latch) {
-        try {
-            latch.countDown();
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println("FATAL ERROR");
-            System.exit(-1);
-        }
     }
 
 }

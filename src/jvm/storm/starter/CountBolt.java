@@ -1,127 +1,109 @@
+package storm.starter;
 import java.util.Map;
-import java.util.HashMap;
+
 import backtype.storm.tuple.Tuple;
 import backtype.storm.task.OutputCollector;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.IRichBolt;
 import backtype.storm.task.TopologyContext;
-import backtype.storm.tuple.Fields;
-import backtype.storm.tuple.Values;
-
-import backtype.storm.topology.BasicOutputCollector;
-import backtype.storm.topology.OutputFieldsDeclarer;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.concurrent.ConcurrentHashMap;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.*;
 import com.datastax.driver.core.*;
 
-public class CountBolt implements IRichBolt{
-	Map<String, Integer> countersQty;
-	Map<String, Float> countersPrice;
-	private OutputCollector collector;
+public class CountBolt implements IRichBolt {
+    private ConcurrentHashMap<String, Integer> countersQty = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, Float> countersPrice = new ConcurrentHashMap<>();
+    private OutputCollector collector;
 
 
-	@Override
-	public void prepare(Map stormConf, TopologyContext context,
-			    OutputCollector collector) {
+    @Override
+    public void prepare(Map stormConf, TopologyContext context,
+                        OutputCollector collector) {
+        this.collector = collector;
+    }
 
-	this.countersQty = new HashMap<String, Integer>();
-	this.countersPrice = new HashMap<String, Float>();
-	this.collector = collector;
-	
-	}
+    @Override
+    public void execute(Tuple input) {
+        String field1 = input.getString(0);
+        String field2 = input.getString(1);
+        String field3 = input.getString(2);
+        String field4 = input.getString(3);
+        String field5 = input.getString(4);
+        String field6 = input.getString(5);
+        String field7 = input.getString(6);
+        String field8= input.getString(7);
+        String field9 = input.getString(8);
+        String field10 = input.getString(9);
 
-	@Override
-	public void execute(Tuple input) {
-	System.out.println("------>>>> The tuple input is ---->>>> " + input);
-	String clordid = input.getString(0);
-	String BodyLength = input.getString(1);
-	String Msgtype = input.getString(2);
-	String SenderCompID = input.getString(3);
-	String  Msgseqnum = input.getString(4);
-	String Sendingtime = input.getString(5);
-	String Price = input.getString(6);
-	String OrderQty = input.getString(7);
-	String Symbol = input.getString(8);
-	String CheckSum = input.getString(9);
-       
 
-	//for repeating ID's we accumulate the order qty and price
- 	float totPrice = Float.valueOf(Price);
-	int totOrderQty = Integer.parseInt(OrderQty);  
-	 
-	if(!countersQty.containsKey(clordid)){
-		countersQty.put(clordid, totOrderQty);
-	}else{
-		Integer q = countersQty.get(clordid) + totOrderQty;
-		countersQty.put(clordid, q);
-	}
+        //for repeating value of field1 we accumulate the order qty and price
+        Float totPrice = Float.valueOf(field7);
+        Integer totOrderQty = Integer.parseInt(field8);
 
-	if(!countersPrice.containsKey(clordid)){
-		countersPrice.put(clordid, totPrice);
-	}else{
-		Float p = countersPrice.get(clordid) + totPrice;
-		countersPrice.put(clordid, p);
-	}
+        if (!countersQty.containsKey(field1)) {
+            countersQty.put(field1, totOrderQty);
+        } else {
+            countersQty.put(field1, (countersQty.get(field1) + totOrderQty));
+        }
 
-	String netPrice = String.valueOf(countersPrice.get(clordid));
-	String netQty = String.valueOf(countersQty.get(clordid));
+        if (!countersPrice.containsKey(field1)) {
+            countersPrice.put(field1, totPrice);
+        } else {
+            countersPrice.put(field1, (countersPrice.get(field1) + totPrice));
+        }
 
-	Cluster clust;
+        String netPrice = String.valueOf(countersPrice.get(field1));
+        String netQty = String.valueOf(countersQty.get(field1));
+
+        Cluster cluster;
         Session session;
-        clust = Cluster.builder().addContactPoint("f3").build();
-        session = clust.connect("fixstats");
-        
-	Statement statement = QueryBuilder.insertInto("fixstats", "order_state")
-                .value("clordid", clordid)
-                .value("BodyLength", BodyLength)
-                .value("Msgtype", Msgtype)
-		.value("SenderCompID", SenderCompID)
-		.value("Msgseqnum", Msgseqnum)
-		.value("Sendingtime", Sendingtime)
-		.value("Price", netPrice)
-		.value("OrderQty", netQty)
-		.value("Symbol", Symbol)
-		.value("CheckSum", CheckSum);
+        cluster = Cluster.builder().addContactPoint("q3").build(); /*q3 is hostname of machine.*/
+        session = cluster.connect("FIXdata");
 
-	session.execute(statement);
-	
-	try {
-   		 Thread.sleep(1000);                 //1000 milliseconds is one second.
-	    } catch(InterruptedException ex) {
-    			Thread.currentThread().interrupt();
-	   }
+        Statement statement = QueryBuilder.insertInto("FIXdata", "order_state")
+                .value("field1", field1)
+                .value("field2", field2)
+                .value("field3", field3)
+                .value("field4", field4)
+                .value("field5", field5)
+                .value("field6", field6)
+                .value("field7", netPrice)
+                .value("field8", netQty)
+                .value("field9", field9)
+                .value("field10", field10);
 
-	session.close();
-        clust.close();	
+        session.execute(statement);
 
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        }
 
-	collector.ack(input);
+        session.close();
+        cluster.close();
 
-}
+        collector.ack(input);
 
-
-	@Override
-	public void cleanup() {
-	//nothin to do!
-	}
-	
-	@Override
-	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		//declarer.declare(new Fields("str"));
-
-}
+    }
 
 
-	@Override
-	public Map<String, Object> getComponentConfiguration() {
-		return null;
-	}
+    @Override
+    public void cleanup() {
+    }
+
+    @Override
+    public void declareOutputFields(OutputFieldsDeclarer declarer) {
+
+    }
+
+
+    @Override
+    public Map<String, Object> getComponentConfiguration() {
+        return null;
+    }
 
 }
 
